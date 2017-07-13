@@ -182,8 +182,9 @@ cgroup_trace_attach_task() {
         DST_PATH=${2}
         TASKS_FILE=${3}
 
+		EVENT= "cgroup_attach_task_devlib: dst_root=$DST_ROOT dst_path=$DST_PATH"
         cat $TASKS_FILE | while read PID; do
-            echo "cgroup_attach_task_devlib: dst_root=$DST_ROOT dst_path=$DST_PATH pid=$PID" > /sys/kernel/debug/tracing/trace_marker
+            echo "$EVENT pid=$PID" > /sys/kernel/debug/tracing/trace_marker
         done
 }
 

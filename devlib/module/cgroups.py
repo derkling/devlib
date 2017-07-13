@@ -287,11 +287,6 @@ class CGroup(object):
         logging.debug('Tasks: %s', task_ids)
         return map(int, task_ids)
 
-    # Used to insert fake cgroup attach events to know existing cgroup assignments
-    def trace_cgroup_tasks(self):
-        exec_cmd = "cgroup_trace_attach_task {} {} {}".format(self.controller.hid, self.directory, self.tasks_file)
-        self.target._execute_util(exec_cmd)
-
     def add_task(self, tid):
         self.target.write_value(self.tasks_file, tid, verify=False)
 
@@ -301,6 +296,20 @@ class CGroup(object):
 
     def add_proc(self, pid):
         self.target.write_value(self.procs_file, pid, verify=False)
+
+    def trace(self):
+        """
+        Inject fake trace events to report existing cgroup assignments.
+
+        or every task active in the system and currently assigned to this
+        CGroup, this method will inject a fake cgroup_attach trace event.
+        This allows to precisely report which tasks are assigned to which
+        CGroup in at a given time (e.g. the start of an experiment).
+        """
+        exec_cmd = "cgroup_trace_attach_task {} {} {}".format(
+            self.controller.hid, self.directory, self.tasks_file)
+        self.logger.info("Trace [%s:%s]", self.controller.kind, self.name)
+        self.target._execute_util(exec_cmd)
 
 CgroupSubsystemEntry = namedtuple('CgroupSubsystemEntry', 'name hierarchy num_cgroups enabled')
 
