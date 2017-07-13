@@ -207,6 +207,33 @@ class Controller(object):
             tasks[cg] = self.tasks_count(cg)
         return tasks
 
+    def trace(self, cgroups=None):
+        """
+        Inject fake trace events to report existing cgroup assignments.
+
+        For every task active in the system this method will inject a fake
+        cgroup_attach trace event which allows to precisely report which tasks
+        are assigned to which CGroup in at a given time, e.g. the start of an
+        experiment.
+
+        The user can limit the scope to a specified list of cgroups.
+        """
+        all_cgroups = self.list_all()
+        if cgroups is None:
+            cgroups = all_cgroups
+        for cgroup in cgroups:
+            # This check is to ensure we are listing only pre-existing CGroups
+            # If a user-specified cgroup does not already exists for this
+            # controller, then we just skip it for this controller.
+            # Such an implementation allows to use a single list of cgroups
+            # even in case of disjoing controller's cgroups.
+            if cgroup not in all_cgroups:
+                self.logger.debug("CGroup [%s:%s] not existing, SKIPPING",
+                                  self.kind, cgroup)
+                continue
+            cg = self.cgroup(cgroup)
+            cg.trace()
+
 class CGroup(object):
 
     def __init__(self, controller, name, create=True):
@@ -499,4 +526,27 @@ class CgroupsModule(Module):
         freezer_cg.set(state='FROZEN')
 
         return tasks
+
+    def trace(self, controllers=None, cgroups=None):
+        """
+        Inject fake trace events to report existing cgroup assignments.
+
+        For every task active in the system this method will inject a fake
+        cgroup_attach trace event which allows to precisely report which tasks
+        are assigned to which CGroup in at a given time, e.g. the start of an
+        experiment.
+
+        The user can limit the scope to a specified list of controllers and/or
+        cgroups.
+        """
+        all_kinds = self.controllers.keys()
+        if controllers is None:
+            controllers = all_kinds
+        for kind in controllers:
+            if kind not in all_kinds:
+                self.logger.warning("Controller [%s] not available, SKIPPING",
+                                    controller)
+                continue
+            ct = self.controller(kind)
+            ct.trace(cgroups)
 
